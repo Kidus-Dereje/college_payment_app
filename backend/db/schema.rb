@@ -16,9 +16,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_31_130912) do
 
   create_table "bank_accounts", force: :cascade do |t|
     t.bigint "service_id", null: false
-    t.string "bank_name", null: false
+    t.string "bank_name"
     t.string "account_number", null: false
-    t.string "account_name", null: false
+    t.string "account_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_number"], name: "index_bank_accounts_on_account_number", unique: true
@@ -27,7 +27,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_31_130912) do
 
   create_table "chapa_transactions", force: :cascade do |t|
     t.string "tx_ref", null: false
-    t.string "status", null: false
+    t.integer "status", null: false
     t.decimal "amount", precision: 12, scale: 2, null: false
     t.bigint "user_id", null: false
     t.string "transaction_type", null: false

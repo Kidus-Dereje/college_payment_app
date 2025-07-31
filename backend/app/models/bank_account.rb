@@ -3,6 +3,8 @@ class BankAccount < ApplicationRecord
   has_many :wallet_transactions, dependent: :nullify
   has_many :payment_transactions, dependent: :nullify
   
-  validates :bank_name, :account_number, :account_name, presence: true
+  validates :account_number, presence: true
   validates :account_number, uniqueness: true
+
+  validates :service_id, uniqueness: {message: "has already been assigned a bank account"}
 end
