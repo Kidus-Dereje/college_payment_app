@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_28_214204) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_31_130912) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,6 +23,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_28_214204) do
     t.datetime "updated_at", null: false
     t.index ["account_number"], name: "index_bank_accounts_on_account_number", unique: true
     t.index ["service_id"], name: "index_bank_accounts_on_service_id"
+  end
+
+  create_table "chapa_transactions", force: :cascade do |t|
+    t.string "tx_ref", null: false
+    t.string "status", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.bigint "user_id", null: false
+    t.string "transaction_type", null: false
+    t.text "raw_payload"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tx_ref"], name: "index_chapa_transactions_on_tx_ref", unique: true
+    t.index ["user_id"], name: "index_chapa_transactions_on_user_id"
   end
 
   create_table "course_departments", force: :cascade do |t|
@@ -152,6 +165,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_28_214204) do
   end
 
   add_foreign_key "bank_accounts", "services"
+  add_foreign_key "chapa_transactions", "users"
   add_foreign_key "course_departments", "courses"
   add_foreign_key "course_departments", "departments"
   add_foreign_key "student_courses", "courses"
