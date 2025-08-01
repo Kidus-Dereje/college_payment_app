@@ -19,7 +19,8 @@ default: &default
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   host: localhost
   username: postgres
-  password: 'Kulech2217:'
+  password: 'postgres'
+  port: 5432
 
 
 

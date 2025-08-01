@@ -1,7 +1,19 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 
 export default function BitsPayWallet() {
+  const [balance, setBalance] = useState(null);
+  // TODO: Replace with your actual user_id retrieval logic (e.g., from localStorage, context, or props)
+  const userId = localStorage.getItem('user_id');
+
+  useEffect(() => {
+    if (userId) {
+      axios.get(`http://localhost:3000/api/wallet/${userId}/balance`)
+        .then(res => setBalance(res.data.balance))
+        .catch(() => setBalance('Error'));
+    }
+  }, [userId]);
   const [activeSection, setActiveSection] = useState("Home")
   const [selectedMajor, setSelectedMajor] = useState("")
   const [selectedYear, setSelectedYear] = useState(1)
@@ -185,7 +197,7 @@ export default function BitsPayWallet() {
                 <div>
                   <p className="text-gray-600 text-sm mb-2">Balance</p>
                   <p className="text-2xl font-bold text-gray-800 tracking-wider">
-                    {showBalance ? "ETB 15,000.00" : "ETB ****.**"}
+                    {showBalance ? (balance !== null ? `ETB ${Number(balance).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}` : 'Loading...') : "ETB ****.**"}
                   </p>
                 </div>
                 <button

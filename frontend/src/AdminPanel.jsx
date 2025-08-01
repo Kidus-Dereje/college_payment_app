@@ -12,20 +12,20 @@ export default function AdminPanel() {
         student_ids: selected
       });
       const { created, errors } = response.data;
-      let msg = '';
       if (created && created.length > 0) {
-        msg += `${created.length} users created successfully.\n`;
+        // Redirect to credentials summary view with created credentials
+        const createdParam = encodeURIComponent(JSON.stringify(created));
+        window.location.assign(`/students/credentials_summary?created=${createdParam}`);
+        return;
       }
+      let msg = '';
       if (errors && errors.length > 0) {
         msg += `${errors.length} users failed to create.`;
       }
       alert(msg || 'No users were created.');
       // Optionally, refresh the student list
-      if (created && created.length > 0) {
-        setSelected([]);
-        // re-fetch students if desired
-        if (typeof fetchStudents === 'function') fetchStudents();
-      }
+      setSelected([]);
+      if (typeof fetchStudents === 'function') fetchStudents();
     } catch (err) {
       alert('Bulk creation failed.');
     }
@@ -43,9 +43,10 @@ export default function AdminPanel() {
   // Filtered students based on searchTerm
   const filteredStudents = students.filter(student => {
     const search = searchTerm.toLowerCase();
+    const name = `${student.first_name || ""} ${student.last_name || ""}`.toLowerCase();
     return (
       student.student_id?.toLowerCase().includes(search) ||
-      student.email?.toLowerCase().includes(search)
+      name.includes(search)
     );
   });
 

@@ -1,6 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      const response = await axios.post("http://localhost:3000/api/login", { email, password });
+      const { role, user_id } = response.data;
+      if (user_id) localStorage.setItem('user_id', user_id);
+      if (role === "admin") {
+        navigate("/admin");
+      } else if (role === "student") {
+        navigate("/wallet");
+      } else {
+        setError("Unknown user role.");
+      }
+    } catch (err) {
+      console.log("Login error:", err); // <-- Add this for debugging
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-green-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Header with Logo - Centered at top */}
@@ -22,23 +53,33 @@ export default function Login() {
           </div>
 
           {/* Login Form */}
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
                 <input
                   type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   placeholder="Email"
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
                 />
               </div>
               <div>
                 <input
                   type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="Password"
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
                 />
               </div>
             </div>
+
+            {error && (
+              <div className="text-red-600 text-center text-sm">{error}</div>
+            )}
 
             <div>
               <button
