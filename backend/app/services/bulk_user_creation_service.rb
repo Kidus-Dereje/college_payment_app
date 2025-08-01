@@ -16,7 +16,7 @@ class BulkUserCreationService
       if user.save
         student.update(user_id: user.id)
         UserMailer.with(user: user, password: password, student: student).welcome_email.deliver_later
-        @created << {student_id: student.id, user_id: user.id, email: student.email}
+        @created << {student_id: student.id, user_id: user.id, email: student.email, password: password}
       else
         @errors << {student_id: student.id, errors: user.errors.full_messages}
       end

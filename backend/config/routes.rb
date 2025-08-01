@@ -1,5 +1,7 @@
 Rails.application.routes.draw do
- 
+  namespace :api do
+    get 'wallet/:user_id/balance', to: 'wallets#balance'
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -16,6 +18,7 @@ end
         post :bulk_create_users
       end
     end
+    post 'login', to: 'sessions#create'
   end
   namespace :api do
     namespace :v1 do
@@ -37,5 +40,9 @@ end
       resources :bank_accounts, only: [:index, :show, :create, :update, :destroy]
 
     end
+    get 'students/credentials_summary', to: 'students#credentials_summary'
   end
+
+
+  
 
