@@ -1,11 +1,112 @@
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function BitsPayWallet() {
   const [activeSection, setActiveSection] = useState("Home")
   const [selectedMajor, setSelectedMajor] = useState("")
   const [selectedYear, setSelectedYear] = useState(1)
   const [showBalance, setShowBalance] = useState(false)
+  const [depositAmount, setDepositAmount] = useState("")
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentType, setPaymentType] = useState("full-tuition")
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState("")
+
+  // Chapa configuration 
+  const CHAPA_PUBLIC_KEY = "CHAPUBK_TEST-NeIrAl3Gw1751zvQf0FQ0yMnQAinVo7g"
+
+  // Generate unique transaction reference
+  const generateTxRef = (type) => {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 15)
+    return `${type}-${timestamp}-${random}`
+  }
+
+  // Create and submit Chapa payment form
+  const submitChapaPayment = (paymentData) => {
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = "https://api.chapa.co/v1/hosted/pay"
+    form.style.display = "none"
+
+    const fields = {
+      public_key: CHAPA_PUBLIC_KEY,
+      tx_ref: paymentData.tx_ref,
+      amount: paymentData.amount,
+      currency: "ETB",
+      email: "user@bitspay.com",
+      first_name: "BitsPay",
+      last_name: "User",
+      title: paymentData.title,
+      description: paymentData.description,
+      logo: "https://chapa.link/asset/images/chapa_swirl.svg",
+      callback_url: `${window.location.origin}/payment-callback`,
+      return_url: `${window.location.origin}/wallet`,
+      "meta[title]": "BitsPay Transaction",
+    }
+
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = key
+      input.value = value
+      form.appendChild(input)
+    })
+
+    // Show popup with iframe
+    // setPaymentUrl("https://api.chapa.co/v1/hosted/pay")
+    // setShowPaymentPopup(true)
+
+    // Submit form to iframe
+    document.body.appendChild(form)
+    setTimeout(() => {
+      form.target = "chapa-payment-frame"
+      form.submit()
+      document.body.removeChild(form)
+    }, 100)
+  }
+
+  // Handle deposit button click
+  const handleDeposit = () => {
+    if (!depositAmount || Number.parseFloat(depositAmount) <= 0) {
+      alert("Please enter a valid deposit amount")
+      return
+    }
+
+    const paymentData = {
+      tx_ref: generateTxRef("DEPOSIT"),
+      amount: depositAmount,
+      title: "BitsPay Wallet Deposit",
+      description: `Deposit ${depositAmount} ETB to BitsPay wallet`,
+    }
+
+    submitChapaPayment(paymentData)
+  }
+
+  // Handle payment button click
+  const handlePayment = () => {
+    if (!paymentAmount || Number.parseFloat(paymentAmount) <= 0) {
+      alert("Please enter a valid payment amount")
+      return
+    }
+
+    const paymentTypeLabels = {
+      "full-tuition": "Full Tuition Payment",
+      "tuition-60": "60% Tuition Payment", 
+      "tuition-40": "40% Tuition Payment",
+      cafeteria: "Cafeteria Services",
+      juice: "Juice Services",
+      "mini-market": "Mini Market Services",
+    }
+
+    const paymentData = {
+      tx_ref: generateTxRef("PAYMENT"),
+      amount: paymentAmount,
+      title: paymentTypeLabels[paymentType],
+      description: `Payment for ${paymentTypeLabels[paymentType]} - ${paymentAmount} ETB`,
+    }
+
+    submitChapaPayment(paymentData)
+  }
 
   // Notifications section removed - only 4 navigation items
   const navigationItems = ["Home", "Courses", "Payments", "Transaction History"]
@@ -178,7 +279,6 @@ export default function BitsPayWallet() {
               <h1 className="text-2xl font-bold text-gray-800">Account Balance</h1>
               <p className="text-gray-600">Your current balance across all accounts</p>
             </div>
-
             {/* Updated balance card with your green color and eye toggle */}
             <div className="bg-custom-green bg-opacity-30 border-0 relative rounded-lg p-6">
               <div className="flex justify-between items-start">
@@ -216,7 +316,6 @@ export default function BitsPayWallet() {
                 </button>
               </div>
             </div>
-
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-gray-800 text-center">Recent Activity</h2>
               <div className="space-y-2">
@@ -238,13 +337,11 @@ export default function BitsPayWallet() {
             </div>
           </div>
         )
-
       case "Courses":
         return (
           <div className="max-w-4xl mx-auto mt-8 space-y-6 px-4">
             <div className="bg-white border-0 shadow-lg rounded-lg p-6">
               <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">Courses & Costs</h1>
-
               <div className="space-y-2 mb-6">
                 <label className="text-sm font-medium text-gray-700">Select Major:</label>
                 <select
@@ -257,7 +354,6 @@ export default function BitsPayWallet() {
                   <option value="ITS">Information Technology Systems (ITS)</option>
                 </select>
               </div>
-
               {selectedMajor && (
                 <div className="space-y-4">
                   <div className="flex justify-center space-x-2 flex-wrap gap-2">
@@ -276,7 +372,6 @@ export default function BitsPayWallet() {
                       </button>
                     ))}
                   </div>
-
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-center text-gray-800 bg-gray-100 py-2 rounded">
@@ -301,7 +396,6 @@ export default function BitsPayWallet() {
                         ETB
                       </div>
                     </div>
-
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-center text-gray-800 bg-gray-100 py-2 rounded">
                         Semester 2
@@ -326,7 +420,6 @@ export default function BitsPayWallet() {
                       </div>
                     </div>
                   </div>
-
                   <div className="text-center text-lg font-bold text-gray-800 bg-custom-green/10 p-4 rounded">
                     Year {selectedYear} Total:{" "}
                     {(
@@ -346,31 +439,34 @@ export default function BitsPayWallet() {
             </div>
           </div>
         )
-
       case "Payments":
         return (
           <div className="max-w-md mx-auto mt-8 px-4">
             <div className="bg-white border-0 shadow-lg rounded-lg p-6">
               <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">Payments</h1>
-
               <div className="space-y-8">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-center text-gray-800">Deposit</h3>
                   <input
-                    type="text"
+                    type="number"
                     placeholder="Amount to deposit"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-custom-green focus:border-transparent"
                   />
-                  <button className="w-full bg-custom-green hover:bg-custom-green/90 text-white py-3 rounded-md font-medium transition-colors">
+                  <button 
+                    onClick={handleDeposit}
+                    className="w-full bg-custom-green hover:bg-custom-green/90 text-white py-3 rounded-md font-medium transition-colors"
+                  >
                     Deposit
                   </button>
                 </div>
-
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-center text-gray-800">Make Payment</h3>
                   <select
-                    defaultValue="full-tuition"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus: ring-custom-green focus:border-transparent"
+                    value={paymentType}
+                    onChange={(e) => setPaymentType(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-custom-green focus:border-transparent"
                   >
                     <option value="full-tuition">Full Tuition</option>
                     <option value="tuition-60">60% (tuition)</option>
@@ -380,11 +476,16 @@ export default function BitsPayWallet() {
                     <option value="mini-market">Mini Market Services</option>
                   </select>
                   <input
-                    type="text"
+                    type="number"
                     placeholder="Enter Amount"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-custom-green  focus:border-transparent"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-custom-green focus:border-transparent"
                   />
-                  <button className="w-full bg-custom-green hover:bg-custom-green/90 text-white py-3 rounded-md font-medium transition-colors">
+                  <button 
+                    onClick={handlePayment}
+                    className="w-full bg-custom-green hover:bg-custom-green/90 text-white py-3 rounded-md font-medium transition-colors"
+                  >
                     Pay
                   </button>
                 </div>
@@ -392,12 +493,11 @@ export default function BitsPayWallet() {
             </div>
           </div>
         )
-
         case "Transaction History":
           return (
             <div className="max-w-2xl mx-auto mt-8 px-4">
               <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Transaction History</h1>
-        
+                      
               <div className="space-y-4">
                 {/* Transaction 1 */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
@@ -424,7 +524,7 @@ export default function BitsPayWallet() {
                     </div>
                   </div>
                 </div>
-        
+                        
                 {/* Transaction 2 */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center space-x-4">
@@ -450,7 +550,7 @@ export default function BitsPayWallet() {
                     </div>
                   </div>
                 </div>
-        
+                        
                 {/* Transaction 3 */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center space-x-4">
@@ -479,10 +579,54 @@ export default function BitsPayWallet() {
               </div>
             </div>
           )
-
       default:
         return null
     }
+  }
+
+  // Payment popup component
+  const PaymentPopup = () => {
+    if (!showPaymentPopup) return null
+
+    const handleClose = () => {
+      setShowPaymentPopup(false)
+      setPaymentUrl("")
+    }
+
+    // Listen for payment completion messages
+    useEffect(() => {
+      // Check if this is a return from Chapa payment
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('status') === 'success' || urlParams.get('tx_ref')) {
+        alert("Payment completed successfully!")
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }, [])
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg w-11/12 h-5/6 max-w-4xl relative">
+          <div className="flex justify-between items-center p-4 border-b">
+            <h3 className="text-lg font-semibold">Complete Payment</h3>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <iframe
+            name="chapa-payment-frame"
+            src="about:blank"
+            className="w-full h-full border-0 rounded-b-lg"
+            title="Chapa Payment"
+          />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -496,7 +640,6 @@ export default function BitsPayWallet() {
                 <span className="text-black">Pay</span>
               </h1>
             </div>
-
             <nav className="flex items-center space-x-1">
               {navigationItems.map((item) => (
                 <button
@@ -521,8 +664,8 @@ export default function BitsPayWallet() {
           </div>
         </div>
       </header>
-
       <main className="py-8">{renderContent()}</main>
+      <PaymentPopup />
     </div>
   )
 }
