@@ -1,4 +1,5 @@
 class Api::StudentsController < ApplicationController
+
   def index
     students = Student.where(user_id: nil)
     render json: students
@@ -13,4 +14,5 @@ class Api::StudentsController < ApplicationController
     service = BulkUserCreationService.new(student_ids).call
     render json: { created: service.created, errors: service.errors }, status: :ok
   end
+
 end

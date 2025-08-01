@@ -1,6 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault(); // Prevents the default form submission and page reload
+
+    try {
+      const response = await axios.post('http://localhost:3000/api/v1/auth/login', {
+        email,
+        password,
+      });
+
+      const { token, role } = response.data;
+
+      // Save the token and role to local storage
+      localStorage.setItem('jwt_token', token);
+      localStorage.setItem('user_role', role);
+
+      alert('Login successful!');
+
+      // Redirect the user based on their role
+      if (role === 'admin') {
+        navigate('/admin-panel');
+      } else if (role === 'student') {
+        navigate('/student-dashboard');
+      }
+    } catch (error) {
+      alert('Login failed. Please check your credentials.');
+      console.error('Login error:', error.response || error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-green-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Header with Logo - Centered at top */}
@@ -22,12 +57,14 @@ export default function Login() {
           </div>
 
           {/* Login Form */}
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleLogin}>
             <div className="space-y-4">
               <div>
                 <input
                   type="email"
                   placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
@@ -35,6 +72,8 @@ export default function Login() {
                 <input
                   type="password"
                   placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>

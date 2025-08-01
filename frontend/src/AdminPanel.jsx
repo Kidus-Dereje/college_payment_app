@@ -1,10 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const getAuthToken =()=>{
+  return localStorage.getItem('authToken');
+}
+
 export default function AdminPanel() {
   // ...existing state and logic...
 
   // Bulk create users for selected students
+
+  const [bankAccountForm, setBankAccountForm] = useState({
+    service_id: '',
+    account_number:''
+  })
+
+  // const services =[
+  //   {id: 'tuition', name: 'Tuition'},
+  //   {id: 'cafeteria', name: 'Cafeteria Services'},
+  //   {id: 'juice', name: 'Juice Services'},
+  //   {id: 'market', name: 'Mini Market'}
+  // ];
+
+  const handleBankAccountFormChange =(e) =>{
+    const {name, value} = e.target;
+    setBankAccountForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
   const handleBulkCreateUsers = async () => {
     if (selected.length === 0) return;
     try {
@@ -31,6 +55,44 @@ export default function AdminPanel() {
     }
   };
 
+  const handleSetBankAccount = async () => {
+    if (!bankAccountForm.service_id || !bankAccountForm.account_number){
+      alert('Please fill out all required fields.');
+    }
+
+    const payload ={
+      bank_account: {
+        bank_name:'BitsPay Bank',
+        account_name: 'college admin account',
+        is_active:true,
+        service_id: bankAccountForm.service_id,
+        account_number: bankAccountForm.account_number
+      }
+    };
+
+    try{
+      const token = getAuthToken();
+      if (!token){
+        alert ('Authentication token is missing. please login');
+        return;
+      }
+      const response = await axios.post('http://localhost:3000/api/v1/bank_accounts', payload,
+        { headers: {'Authorization': 'Bearer ${token}'}}
+      );
+
+      alert('Bank account set successfully.');
+
+      setBankAccountForm({...bankAccountForm, account_number: ''});
+    } catch (err){
+      alert('Failed to set bank account, check console')
+      console.error(err.response||err)
+    }
+    };
+
+    
+
+
+
   const [activeTab, setActiveTab] = useState('students');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('');
@@ -39,6 +101,12 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState([]); // array of selected student_ids
+
+  const[services, setServices]= useState([]);
+  const[servicesLoading, setServicesLoading] = useState(true);
+  const[servicesError, setServicesError] = useState(null);
+
+
 
   // Filtered students based on searchTerm
   const filteredStudents = students.filter(student => {
@@ -226,13 +294,28 @@ export default function AdminPanel() {
               </label>
               <select
                 id="service-type"
+                name="service_id"
+                value={bankAccountForm.service_id}
+                onChange={handleBankAccountFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-custom-green focus:border-custom-green sm:text-sm"
               >
                 <option value="">Select a service</option>
-                <option value="tuition">Tuition</option>
-                <option value="cafeteria">Cafeteria Services</option>
+                { servicesLoading ?(
+                  <option disabled>Loading services</option>
+                ): ServicesError? (
+                  <option disabled>Error loading services</option>
+                ):(
+                  services.map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}  
+                    </option>
+                  ))
+                )
+
+                }
+                {/* <option value="cafeteria">Cafeteria Services</option>
                 <option value="juice">Juice Services</option>
-                <option value="market">Mini Market</option>
+                <option value="market">Mini Market</option> */}
               </select>
             </div>
             
@@ -243,6 +326,8 @@ export default function AdminPanel() {
               <input
                 type="text"
                 id="account-number"
+                value={bankAccountForm.account_number}
+                onChange={handleBankAccountFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-custom-green focus:border-custom-green sm:text-sm"
                 placeholder="Enter account number"
               />
@@ -251,6 +336,7 @@ export default function AdminPanel() {
             <div className="pt-2">
               <button
                 type="button"
+                onClick={handleSetBankAccount}
                 className="w-40 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-custom-green hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-custom-green transition-colors"
               >
                 Set Account
