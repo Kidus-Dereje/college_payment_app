@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react"
+import axios from "axios";
+
 
 export default function BitsPayWallet() {
   const [activeSection, setActiveSection] = useState("Home")
@@ -64,12 +66,29 @@ export default function BitsPayWallet() {
       document.body.removeChild(form)
     }, 100)
   }
+  
 
   // Handle deposit button click
-  const handleDeposit = () => {
+  const handleDeposit = async() => {
     if (!depositAmount || Number.parseFloat(depositAmount) <= 0) {
       alert("Please enter a valid deposit amount")
       return
+    }
+    try {
+      const response = await axios.post("http://localhost:3000/api/v1/payments/topup",{
+       amount: depositAmount
+        });
+      const { checkout_url} = response.data;
+      
+      if (checkout_url){
+        window.location.href=checkout_url;
+      }else{
+        alert( "Failed to initiate payment");
+      }
+    } catch (error){
+      console.error("Deposit error:" , error);
+      const message = error.response?.data?.error ||"something went wrong. Please try again later";
+      alert(message);
     }
 
     const paymentData = {
@@ -81,13 +100,62 @@ export default function BitsPayWallet() {
 
     submitChapaPayment(paymentData)
   }
+  const[wallet, setWallet] = useState(null);
+
+  useEffect(() => {
+    const txRef = new URLSearchParams(window.location.search).get("tx_ref");
+    if (txRef) {
+      axios
+      .post("http://localhost:3000/api/v1/payments/callback", { tx_ref: txRef })
+      .then(()=>{
+
+        axios.get("http://localhost:3000/app/models/wallet")
+        .then((res)=>{
+          setWallet(res.data);
+        });
+      })
+      .catch((err)=>{
+        console.error("Payment verification failed:",err);
+      });
+    }
+      
+  },[]);
 
   // Handle payment button click
-  const handlePayment = () => {
+  const handlePayment = async() => {
     if (!paymentAmount || Number.parseFloat(paymentAmount) <= 0) {
       alert("Please enter a valid payment amount")
       return
     }
+
+    const selectedServiceId = serviceIdMapping[paymentType];
+    try {
+      const reponse = await fetch("http://localhost:3000/api/v1/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payment: {
+            amount: paymentAmount,
+            service_id: selectedServiceId,
+          },
+        }),
+      });
+      const data = await reponse.json();
+      if (reponse.ok && data.checkout_url) {
+        window.location.href = data.checkout_url;
+        } else {
+        alert(data.error || "Failed to initiate payment");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("Something went wrong. Please try again .");
+
+          
+        
+
+    };
 
     const paymentTypeLabels = {
       "full-tuition": "Full Tuition Payment",
