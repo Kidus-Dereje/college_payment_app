@@ -1,23 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 export default function AdminPanel() {
+  // ...existing state and logic...
+
+  // Bulk create users for selected students
+  const handleBulkCreateUsers = async () => {
+    if (selected.length === 0) return;
+    try {
+      const response = await axios.post('http://localhost:3000/api/students/bulk_create_users', {
+        student_ids: selected
+      });
+      const { created, errors } = response.data;
+      let msg = '';
+      if (created && created.length > 0) {
+        msg += `${created.length} users created successfully.\n`;
+      }
+      if (errors && errors.length > 0) {
+        msg += `${errors.length} users failed to create.`;
+      }
+      alert(msg || 'No users were created.');
+      // Optionally, refresh the student list
+      if (created && created.length > 0) {
+        setSelected([]);
+        // re-fetch students if desired
+        if (typeof fetchStudents === 'function') fetchStudents();
+      }
+    } catch (err) {
+      alert('Bulk creation failed.');
+    }
+  };
+
   const [activeTab, setActiveTab] = useState('students');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('');
 
-  // Sample student data
-  const students = [
-    { id: 'UGR/20210001', name: 'Eyoal Admasu', year: 2021, course: 'Software Engineering' },
-    { id: 'UGR/20210002', name: 'Kidus Dereje', year: 2021, course: 'Software Engineering' },
-    { id: 'UGR/20220003', name: 'Estifanos Wondwossen', year: 2022, course: 'Software Engineering' },
-    { id: 'UGR/20220004', name: 'Kidus Amare', year: 2022, course: 'Software Engineering' },
-    { id: 'UGR/20230005', name: 'Asha Jamal', year: 2023, course: 'Information Systems' },
-    { id: 'UGR/20230006', name: 'Tilahun Zemecha', year: 2023, course: 'Information Systems' },
-    { id: 'UGR/20210007', name: 'Maria Jamal', year: 2021, course: 'Information Systems' },
-    { id: 'UGR/20220008', name: 'Amen Sengi', year: 2022, course: 'Information Systems' },
-    { id: 'UGR/20230009', name: 'Nathan Berhanu', year: 2023, course: 'Information Systems' },
-    { id: 'UGR/20210010', name: 'Kaleb Aron', year: 2021, course: 'Information Systems' },
-  ];
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState([]); // array of selected student_ids
+
+  // Filtered students based on searchTerm
+  const filteredStudents = students.filter(student => {
+    const search = searchTerm.toLowerCase();
+    return (
+      student.student_id?.toLowerCase().includes(search) ||
+      student.email?.toLowerCase().includes(search)
+    );
+  });
+
+  // Select all checkbox logic
+  const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => selected.includes(s.student_id));
+  const someSelected = filteredStudents.some(s => selected.includes(s.student_id));
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelected(filteredStudents.map(s => s.student_id));
+    } else {
+      setSelected(selected.filter(id => !filteredStudents.map(s => s.student_id).includes(id)));
+    }
+  };
+
+  const handleSelectOne = (student_id) => {
+    setSelected(prev => prev.includes(student_id) ? prev.filter(id => id !== student_id) : [...prev, student_id]);
+  };
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('http://localhost:3000/api/students');
+        if (!response.ok) throw new Error('Failed to fetch students');
+        const data = await response.json();
+        setStudents(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white p-6 font-sans">
@@ -75,9 +139,13 @@ export default function AdminPanel() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <button className="bg-custom-green hover:bg-green-600 text-white px-6 py-2 rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-custom-green transition-colors">
-              Create Student
-            </button>
+            <button
+  className="bg-custom-green hover:bg-green-600 text-white px-6 py-2 rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-custom-green transition-colors"
+  onClick={handleBulkCreateUsers}
+  disabled={selected.length === 0}
+>
+  Create Student
+</button>
           </div>
 
           <div className="border border-gray-200 rounded overflow-hidden">
@@ -85,7 +153,13 @@ export default function AdminPanel() {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                    <input type="checkbox" className="h-4 w-4 text-custom-green rounded border-gray-300" />
+                  <input
+                      type="checkbox"
+                      className="h-4 w-4 text-custom-green rounded border-gray-300"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = !allSelected && someSelected; }}
+                      onChange={handleSelectAll}
+                    />
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
                     Student ID
@@ -97,30 +171,43 @@ export default function AdminPanel() {
                     Enrollment Year
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                    Course
+                    Email
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {students.map((student) => (
-                  <tr key={student.id}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
-                      <input type="checkbox" className="h-4 w-4 text-custom-green rounded border-gray-300" />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-b border-gray-200">
-                      {student.id}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
-                      {student.name}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
-                      {student.year}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
-                      {student.course}
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td colSpan="5" className="text-center py-4">Loading...</td></tr>
+                ) : error ? (
+                  <tr><td colSpan="5" className="text-center text-red-500 py-4">{error}</td></tr>
+                ) : filteredStudents.length === 0 ? (
+                  <tr><td colSpan="5" className="text-center py-4">No students found.</td></tr>
+                ) : (
+                  filteredStudents.map((student) => (
+                    <tr key={student.student_id}>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-custom-green rounded border-gray-300"
+                          checked={selected.includes(student.student_id)}
+                          onChange={() => handleSelectOne(student.student_id)}
+                        />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-b border-gray-200">
+                        {student.student_id}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
+                        {student.first_name + ' ' + student.last_name}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
+                        {student.enrollment_date ? new Date(student.enrollment_date).getFullYear() : ''}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-b border-gray-200">
+                        {student.email}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

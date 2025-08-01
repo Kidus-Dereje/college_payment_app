@@ -9,5 +9,10 @@ Rails.application.routes.draw do
   # root "posts#index"
   namespace :api do
     get 'health', to: 'health#index'
+    resources :students, only: [:index] do
+      collection do
+        post :bulk_create_users
+      end
+    end
   end
 end
