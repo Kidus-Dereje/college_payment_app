@@ -8,6 +8,7 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+end
   namespace :api do
     get 'health', to: 'health#index'
     resources :students, only: [:index] do
@@ -37,4 +38,4 @@ Rails.application.routes.draw do
 
     end
   end
-end
+
