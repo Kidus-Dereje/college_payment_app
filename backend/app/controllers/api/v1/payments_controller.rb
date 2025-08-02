@@ -83,10 +83,10 @@ class Api::V1::PaymentsController < ApplicationController
 
   def callback
     
-  # 🔍 Log raw request body (before parsing)
+
   raw_body = request.body.read
   Rails.logger.debug "Raw request body: #{raw_body}"
-  request.body.rewind  # Important if you need to read again
+  request.body.rewind  
 
   # 🧠 Parse Chapa response
   chapa_response = JSON.parse(raw_body) rescue nil
@@ -151,13 +151,11 @@ class Api::V1::PaymentsController < ApplicationController
     Rails.logger.debug "Wallet updated: User #{user.id}, New balance: #{wallet.balance}"
   end
 
-  # ✅ Successful response
+ 
   head :ok
 
   end
-  def ping
-  render json: { message: "Ping received from PaymentsController" }
-  end
+ 
   private 
   def payment_params
     params.require(:payment).permit(:service_id, :amount)

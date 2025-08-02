@@ -131,7 +131,7 @@ export default function BitsPayWallet() {
       
   },[]);
 
-  // Handle payment button click
+
   const handlePayment = async() => {
     if (!paymentAmount || Number.parseFloat(paymentAmount) <= 0) {
       alert("Please enter a valid payment amount")
