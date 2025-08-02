@@ -9,18 +9,40 @@ class BulkUserCreationService
   attr_reader :created, :errors
 
   def call
-    students = Student.where(id: @student_ids, user_id: nil)
+    students = Student.where(student_id: @student_ids, user_id: nil)
+    Rails.logger.info "Found #{students.count} students to process"
+    
     students.find_each do |student|
-      password = SecureRandom.hex(8)
-      user = User.new(email: student.email, password: password, role: "student")
-      if user.save
-        student.update(user_id: user.id)
-        UserMailer.with(user: user, password: password, student: student).welcome_email.deliver_later
-        @created << {student_id: student.id, user_id: user.id, email: student.email, password: password}
-      else
-        @errors << {student_id: student.id, errors: user.errors.full_messages}
+      Rails.logger.info "Processing student: #{student.student_id}"
+      
+      begin
+        password = SecureRandom.hex(8)
+        user = User.new(email: student.email, password: password, role: "student")
+        
+        if user.save
+          Rails.logger.info "User created successfully for student #{student.student_id}"
+          student.update(user_id: user.id)
+          
+          # Send email
+          begin
+            UserMailer.with(user: user, password: password, student: student).welcome_email.deliver_later
+            Rails.logger.info "Email queued for student #{student.student_id}"
+          rescue => e
+            Rails.logger.error "Email error for student #{student.student_id}: #{e.message}"
+          end
+          
+          @created << {student_id: student.student_id, user_id: user.id, email: student.email, password: password}
+        else
+          Rails.logger.error "User creation failed for student #{student.student_id}: #{user.errors.full_messages}"
+          @errors << {student_id: student.student_id, errors: user.errors.full_messages}
+        end
+      rescue => e
+        Rails.logger.error "Error processing student #{student.student_id}: #{e.message}"
+        @errors << {student_id: student.student_id, errors: [e.message]}
       end
     end
+    
+    Rails.logger.info "BulkUserCreationService completed. Created: #{@created.length}, Errors: #{@errors.length}"
     self
   end
 

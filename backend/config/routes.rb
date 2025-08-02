@@ -16,15 +16,13 @@ Rails.application.routes.draw do
       post 'payments/top_up', to: 'payments#top_up'
       post 'payments/callback', to: 'payments#callback'
       post 'payments', to: 'payments#create'
-      resources :student, only: [:index, :show] do
-        collection do
-          post :bulk_create_users
-        end
-      end
+      resources :student, only: [:index, :show]
       resources :bank_accounts, only: [:index, :show, :create, :update, :destroy]
     end
-    get 'students/credentials_summary', to: 'students#credentials_summary'
   end
+
+  # Non-API routes for HTML views
+  get 'students/email_preview', to: 'students#email_preview'
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

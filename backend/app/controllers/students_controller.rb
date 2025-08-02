@@ -1,9 +1,32 @@
-class StudentsController < ApplicationController
-  # GET /students/credentials_summary
-  # params[:created] is expected to be an array of hashes (email, password, name, etc)
-  def credentials_summary
-    # Accept created as JSON string if passed as a param
-    @created = params[:created].is_a?(String) ? JSON.parse(params[:created], symbolize_names: true) : (params[:created] || [])
-    render :credentials_summary
+class StudentsController < ActionController::Base
+  before_action :authenticate_user!
+
+  # GET /students/email_preview
+  def email_preview
+    @created_users = session[:created_users] || []
+    render 'email_preview'
+  end
+
+  private
+
+  def authenticate_user!
+    token = extract_token_from_header
+    if token
+      payload = JwtService.decode(token)
+      if payload
+        @current_user = User.find_by(id: payload['user_id'])
+        return if @current_user
+      end
+    end
+    redirect_to '/login', alert: 'Unauthorized'
+  end
+
+  def current_user
+    @current_user
+  end
+
+  def extract_token_from_header
+    header = request.headers['Authorization']
+    header&.gsub('Bearer ', '')
   end
 end
