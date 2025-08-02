@@ -32,7 +32,7 @@ const App = () => (
 
       {/* This is the corrected route for the Admin Panel */}
       <Route
-        path="/admin-panel"
+        path="/admin"
         element={
           <ProtectedRoute role="admin">
             <AdminPanel />

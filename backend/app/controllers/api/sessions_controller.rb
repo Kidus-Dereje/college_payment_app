@@ -2,9 +2,16 @@ class Api::SessionsController < ApplicationController
   # POST /api/login
   def create
     user = User.find_by(email: params[:email])
-    
+        
     if user&.authenticate(params[:password])
-      render json: { role: user.role, user_id: user.id }, status: :ok
+      # Generate JWT token
+      token = JwtService.encode({ user_id: user.id, role: user.role })
+      
+      render json: { 
+        role: user.role, 
+        user_id: user.id,
+        token: token 
+      }, status: :ok
     else
       render json: { error: 'Invalid email or password' }, status: :unauthorized
     end
