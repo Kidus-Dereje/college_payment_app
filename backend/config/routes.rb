@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  
   namespace :api do
     get 'wallet/:user_id/balance', to: 'wallets#balance'
     get 'health', to: 'health#index'
@@ -20,6 +21,8 @@ Rails.application.routes.draw do
       resources :bank_accounts, only: [:index, :show, :create, :update, :destroy]
     end
   end
+  post "/webhooks/chapa", to: "webhooks#chapa"
+
 
   # Non-API routes for HTML views
   get 'students/email_preview', to: 'students#email_preview'

@@ -1,3 +1,4 @@
+module V1
 class Api::V1::PaymentsController < ApplicationController
   def current_user
     @current_user ||= User.first
@@ -76,90 +77,94 @@ class Api::V1::PaymentsController < ApplicationController
   end
 
   def callback
-    raw_body = request.body.read
-    Rails.logger.debug "Raw request body: #{raw_body}"
-    request.body.rewind
+  # Read and log raw JSON
+  raw_body = request.body.read
+  Rails.logger.debug "Raw request body: #{raw_body}"
+  request.body.rewind
 
-    chapa_response = JSON.parse(raw_body) rescue nil
-    Rails.logger.debug "Parsed Chapa response: #{chapa_response.inspect}"
+  # Parse JSON safely
+  chapa_response = JSON.parse(raw_body) rescue nil
+  Rails.logger.debug "Parsed Chapa response: #{chapa_response.inspect}"
 
-    unless chapa_response.is_a?(Hash) && chapa_response['data'].is_a?(Hash)
-      Rails.logger.warn "Malformed or missing payload: #{chapa_response.inspect}"
-      return head :bad_request
-    end
+  # Validate structure (flat JSON now)
+  unless chapa_response.is_a?(Hash)
+    Rails.logger.warn "Malformed payload: #{chapa_response.inspect}"
+    return head :bad_request
+  end
 
-    data = chapa_response['data']
-    tx_ref = data['tx_ref']
-    transaction_id = data['id']
-    status = data['status']
-    amount = data['amount'].to_d rescue 0
+  # Extract fields directly from root JSON
+  tx_ref         = chapa_response['tx_ref']
+  transaction_id = chapa_response['transaction_id']
+  status         = chapa_response['status']
+  amount         = chapa_response['amount'].to_d rescue 0
+  user_id        = chapa_response['user_id']
 
-    Rails.logger.debug "tx_ref: #{tx_ref}, transaction_id: #{transaction_id}, status: #{status}, amount: #{amount}"
+  Rails.logger.debug "tx_ref: #{tx_ref}, transaction_id: #{transaction_id}, status: #{status}, amount: #{amount}"
 
-    chapa_tx = ChapaTransaction.find_by(tx_ref: tx_ref)
-    return head :not_found unless chapa_tx
+  # Lookup associated ChapaTransaction
+  chapa_tx = ChapaTransaction.find_by(tx_ref: tx_ref)
+  return head :not_found unless chapa_tx
 
-    user = chapa_tx.user
-    return head :not_found unless user
+  user = chapa_tx.user
+  return head :not_found unless user
 
-    # Idempotency check
-    if chapa_tx.chapa_status == "success" || Payment.exists?(transaction_id: transaction_id)
-      Rails.logger.info "Duplicate callback: transaction already processed"
-      return head :conflict
-    end
+  # Idempotency guard
+  if chapa_tx.chapa_status == chapaTransaction::CHAPA_STATUS_SUCCESS || Payment.exists?(transaction_id: transaction_id)
+    Rails.logger.info "Duplicate callback detected"
+    return head :conflict
+  end
 
-    # Check Chapa status
-    unless status == "success"
-      chapa_tx.update(chapa_status: :failed, raw_payload: chapa_response)
-      Rails.logger.warn "Callback status not successful for tx_ref: #{tx_ref}"
-      return head :ok
-    end
+  # Handle failed payment
+  unless status == chapaTransaction::CHAPA_STATUS_SUCCESS 
+    chapa_tx.update(chapa_status: :failed, raw_payload: chapa_response)
+    Rails.logger.warn "Payment failed for tx_ref: #{tx_ref}"
+    return head :ok
+  end
 
-    # Begin atomic wallet credit
-    ActiveRecord::Base.transaction do
-      Payment.create!(
-        user: user,
-        amount: amount,
-        status: :success,
-        transaction_id: transaction_id,
-        tx_ref: tx_ref,
-        purpose: tx_ref.start_with?("topup") ? "topup" : "service"
-      )
+  # Process successful payment in transaction
+  ActiveRecord::Base.transaction do
+    Payment.create!(
+      user: user,
+      amount: amount,
+      status: :success,
+      transaction_id: transaction_id,
+      tx_ref: tx_ref,
+      purpose: tx_ref.start_with?("topup") ? "topup" : "service"
+    )
 
-      if tx_ref.start_with?("topup")
-        wallet = Wallet.find_or_create_by(user: user)
+    if tx_ref.start_with?("topup")
+      wallet = Wallet.find_or_create_by(user: user)
+      wallet.with_lock do
+        WalletTransaction.create!(
+          wallet: wallet,
+          amount: amount,
+          transaction_type: :credit,
+          source: "Chapa",
+          external_id: transaction_id,
+          metadata: { tx_ref: tx_ref }
+        )
 
-        wallet.with_lock do
-          WalletTransaction.create!(
-            wallet: wallet,
-            amount: amount,
-            transaction_type: :credit,
-            source: "Chapa",
-            external_id: transaction_id,
-            metadata: { tx_ref: tx_ref }
-          )
-
-          wallet.balance ||= 0
-          wallet.balance += amount
-          wallet.save!
-        end
-
-        Rails.logger.debug "Wallet updated: User #{user.id}, New balance: #{wallet.balance}"
+        wallet.balance ||= 0
+        wallet.balance += amount
+        wallet.save!
       end
 
-      chapa_tx.update(chapa_status: :success, raw_payload: chapa_response)
-
-      AuditLog.create!(
-        user: user,
-        action: "chapa_callback_received",
-        metadata: data
-      )
-
-      Rails.logger.info "Callback completed successfully for tx_ref: #{tx_ref}"
+      Rails.logger.debug "Wallet credited: #{amount} ETB → User #{user.id}"
     end
 
-    head :ok
+    chapa_tx.update(chapa_status: :success, raw_payload: chapa_response)
+
+    AuditLog.create!(
+      user: user,
+      action: "chapa_callback_received",
+      metadata: chapa_response
+    )
+
+    Rails.logger.info "Callback processed for tx_ref: #{tx_ref}"
   end
+
+  head :ok
+end
 
   private
 
@@ -170,4 +175,5 @@ class Api::V1::PaymentsController < ApplicationController
   def callback_url
     "#{request.base_url}/api/v1/payments/callback"
   end
+end
 end
