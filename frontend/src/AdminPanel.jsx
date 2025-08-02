@@ -37,13 +37,23 @@ export default function AdminPanel() {
         },
       )
 
-      const { created, errors } = response.data
+      console.log("Response received:", response.data)
+      const { created, errors, redirect_url } = response.data
+      
       if (created && created.length > 0) {
-        const createdParam = encodeURIComponent(JSON.stringify(created))
-        window.location.assign(`/students/credentials_summary?created=${createdParam}`)
-        return
+        console.log("Users created successfully, redirecting...")
+        if (redirect_url) {
+          console.log("Redirecting to:", redirect_url)
+          window.location.assign(redirect_url)
+          return // Ensure we return immediately after redirect
+        } else {
+          const createdParam = encodeURIComponent(JSON.stringify(created))
+          window.location.assign(`/students/credentials_summary?created=${createdParam}`)
+          return // Ensure we return immediately after redirect
+        }
       }
 
+      // Only show error messages if no users were created
       let msg = ""
       if (errors && errors.length > 0) {
         msg += `${errors.length} users failed to create.`
@@ -51,7 +61,9 @@ export default function AdminPanel() {
       alert(msg || "No users were created.")
       setSelected([])
     } catch (err) {
-      alert("Bulk creation failed.")
+      console.error("Bulk creation error:", err)
+      console.error("Error response:", err.response?.data)
+      // alert("Bulk creation failed.")
     }
   }
 
