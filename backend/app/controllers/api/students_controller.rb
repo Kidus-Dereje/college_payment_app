@@ -1,4 +1,5 @@
 class Api::StudentsController < ApplicationController
+  before_action :authenticate_user!
 
   def index
     students = Student.where(user_id: nil)

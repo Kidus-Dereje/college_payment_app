@@ -7,6 +7,7 @@ Rails.application.routes.draw do
         post :bulk_create_users
       end
     end
+    resources :services, only: [:index]
     post 'login', to: 'sessions#create'
 
     namespace :v1 do

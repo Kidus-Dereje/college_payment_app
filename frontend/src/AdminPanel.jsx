@@ -65,7 +65,6 @@ export default function AdminPanel() {
       bank_account: {
         bank_name: "BitsPay Bank",
         account_name: "college admin account",
-        is_active: true,
         service_id: bankAccountForm.service_id,
         account_number: bankAccountForm.account_number,
       },
@@ -119,8 +118,27 @@ export default function AdminPanel() {
     }
   }
 
+  const fetchServices = async () => {
+    setServicesLoading(true)
+    setServicesError(null)
+    try {
+      const token = getAuthToken()
+      const response = await fetch("http://localhost:3000/api/services", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error("Failed to fetch services")
+      const data = await response.json()
+      setServices(data)
+    } catch (err) {
+      setServicesError(err.message)
+    } finally {
+      setServicesLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchStudents()
+    fetchServices()
   }, [])
 
   // Filtered students based on searchTerm
@@ -333,7 +351,7 @@ export default function AdminPanel() {
                 ) : (
                   services.map((service) => (
                     <option key={service.id} value={service.id}>
-                      {service.name}
+                      {service.service_name}
                     </option>
                   ))
                 )}
