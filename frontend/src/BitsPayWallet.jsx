@@ -85,7 +85,7 @@ export default function BitsPayWallet() {
       return
     }
     try {
-      const response = await axios.post("http://localhost:3000/api/v1/payments/topup",{
+      const response = await axios.post("http://localhost:3000/api/v1/payments/top_up",{
        amount: depositAmount
         });
       const { checkout_url} = response.data;
@@ -140,7 +140,7 @@ export default function BitsPayWallet() {
 
     const selectedServiceId = serviceIdMapping[paymentType];
     try {
-      const reponse = await fetch("http://localhost:3000/api/v1/payments", {
+      const response = await fetch("http://localhost:3000/api/v1/payments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,8 +152,8 @@ export default function BitsPayWallet() {
           },
         }),
       });
-      const data = await reponse.json();
-      if (reponse.ok && data.checkout_url) {
+      const data = await response.json();
+      if (response.ok && data.checkout_url) {
         window.location.href = data.checkout_url;
         } else {
         alert(data.error || "Failed to initiate payment");
