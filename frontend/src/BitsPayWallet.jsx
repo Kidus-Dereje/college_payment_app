@@ -171,9 +171,9 @@ export default function BitsPayWallet() {
       "full-tuition": "Full Tuition Payment",
       "tuition-60": "60% Tuition Payment", 
       "tuition-40": "40% Tuition Payment",
-      cafeteria: "Cafeteria Services",
-      juice: "Juice Services",
-      "mini-market": "Mini Market Services",
+      "cafeteria": "Cafeteria Service",
+      "juice": "Juice Bar Service",
+      "mini-market": "Mini Market Service",
     }
 
     const paymentData = {
@@ -549,9 +549,9 @@ export default function BitsPayWallet() {
                     <option value="full-tuition">Full Tuition</option>
                     <option value="tuition-60">60% (tuition)</option>
                     <option value="tuition-40">40% (tuition)</option>
-                    <option value="cafeteria">Cafeteria Services</option>
-                    <option value="juice">Juice Services</option>
-                    <option value="mini-market">Mini Market Services</option>
+                    <option value="cafeteria">Cafeteria Service</option>
+                    <option value="juice">Juice Bar Service</option>
+                    <option value="mini-market">Mini Market Service</option>
                   </select>
                   <input
                     type="number"
