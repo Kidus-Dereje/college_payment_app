@@ -1,32 +1,30 @@
 class ChapaTransaction < ApplicationRecord
   belongs_to :user
 
-  # Constants for chapa_status
-  CHAPA_STATUS_PENDING = 0
-  CHAPA_STATUS_SUCCESS = 1
-  CHAPA_STATUS_FAILED  = 2
+  # Status constants
+  STATUS_PENDING = 0
+  STATUS_SUCCESS = 1
+  STATUS_FAILED  = 2
 
-  # Constants for transaction_type
   TRANSACTION_TYPE_SERVICE     = 0
   TRANSACTION_TYPE_WALLET_TOPUP = 1
 
   validates :tx_ref, presence: true, uniqueness: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
-
-  validates :chapa_status, inclusion: { in: [CHAPA_STATUS_PENDING, CHAPA_STATUS_SUCCESS, CHAPA_STATUS_FAILED] }
+  validates :status, inclusion: { in: [STATUS_PENDING, STATUS_SUCCESS, STATUS_FAILED] }
   validates :transaction_type, inclusion: { in: [TRANSACTION_TYPE_SERVICE, TRANSACTION_TYPE_WALLET_TOPUP] }
 
-  # Helper methods for convenience
+  # Helper methods
   def pending?
-    chapa_status == CHAPA_STATUS_PENDING
+    status == STATUS_PENDING
   end
 
   def success?
-    chapa_status == CHAPA_STATUS_SUCCESS
+    status == STATUS_SUCCESS
   end
 
   def failed?
-    chapa_status == CHAPA_STATUS_FAILED
+    status == STATUS_FAILED
   end
 
   def service_transaction?

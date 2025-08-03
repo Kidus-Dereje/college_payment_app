@@ -18,7 +18,6 @@ class WebhooksController < ApplicationController
     Rails.logger.info "✅ Webhook verified: #{payload[:tx_ref]}"
     Rails.logger.info "📩 Raw Payload: #{request.raw_post}"
 
-    # 🛡️ Replay protection
     if WalletTransaction.exists?(reference_id: payload[:tx_ref])
       Rails.logger.info "⏪ Skipping already processed tx_ref: #{payload[:tx_ref]}"
       return head :ok
@@ -28,15 +27,15 @@ class WebhooksController < ApplicationController
     return head :not_found unless user
 
     ActiveRecord::Base.transaction do
-      # 💰 Credit wallet
+   
       user.wallet.increment!(:balance, payload[:amount].to_f)
 
-      # 📝 Log transaction
+      
       WalletTransaction.create!(
         wallet: user.wallet,
-        bank_account: nil, # optional if direct Chapa topup
-        transaction_type: :topup, # use enum if defined
-        direction: :inbound,      # use enum if defined
+        bank_account: nil, 
+        transaction_type: :topup, 
+        direction: :inbound,     
         amount: payload[:amount],
         reference_id: payload[:tx_ref]
       )

@@ -15,7 +15,7 @@ Rails.application.routes.draw do
       post 'sign_up_student', to: 'registration#sign_up_student'
       post 'login', to: 'session#create'
       post 'payments/top_up', to: 'payments#top_up'
-      post 'payments/callback', to: 'payments#callback'
+       post 'payments/callback', to: 'payments#callback', as: :payments_callback
       post 'payments', to: 'payments#create'
       resources :student, only: [:index, :show]
       resources :bank_accounts, only: [:index, :show, :create, :update, :destroy]
