@@ -1,8 +1,9 @@
 module V1
 class Api::V1::PaymentsController < ApplicationController
-  def current_user
-    @current_user ||= User.first
-  end
+  before_action :authenticate_user!
+  # def current_user
+  #   @current_user ||= User.first
+  # end
 
   def create
     amount = payment_params[:amount].to_d
@@ -43,10 +44,10 @@ class Api::V1::PaymentsController < ApplicationController
   end
 
   def top_up
-  # Log all received params
+  
   Rails.logger.info "Params received in top_up: #{params.inspect}"
   Rails.logger.info "Current user email: #{current_user.email.inspect}"
-  Rails.logger.info "Current user email: #{current_user.email.inspect}"
+  
 
   unless current_user&.email&.match?(URI::MailTo::EMAIL_REGEXP)
     Rails.logger.warn "Invalid email: #{current_user.email.inspect}"
@@ -56,7 +57,7 @@ class Api::V1::PaymentsController < ApplicationController
 
 
 
-  # Safely parse amount
+  
   begin
     amount = params[:amount].to_d
   rescue
@@ -107,60 +108,45 @@ class Api::V1::PaymentsController < ApplicationController
   end
 
 def callback
-  chapa_response = params.require(:payment).permit(
-    :tx_ref, :amount, :status, :transaction_id, :customer_email
-  )
+  chapa_response = params.permit(:tx_ref, :amount, :status, :transaction_id, :customer_email)
 
-  puts "Parsed Chapa response: #{chapa_response.inspect}"
   tx_ref = chapa_response[:tx_ref]
-  transaction_id = chapa_response[:transaction_id]
-  status = chapa_response[:status]
   amount = chapa_response[:amount].to_f
+  status = chapa_response[:status]
 
-  puts "tx_ref: #{tx_ref}, transaction_id: #{transaction_id}, status: #{status}, amount: #{amount}"
+  Rails.logger.info "Callback received: tx_ref=#{tx_ref}, status=#{status}, amount=#{amount}"
 
   chapa_tx = ChapaTransaction.find_by(tx_ref: tx_ref)
-  if chapa_tx.nil?
-    puts "Transaction not found for tx_ref: #{tx_ref}"
-    render json: { error: "Transaction not found" }, status: :not_found
-    return
+  unless chapa_tx
+    Rails.logger.error "Transaction not found for tx_ref: #{tx_ref}"
+    return render json: { error: "Transaction not found" }, status: :not_found
   end
 
   user = chapa_tx.user
-  if chapa_tx.success?
-    puts "Transaction already marked successful."
-    render json: { message: "Already processed" }, status: :ok
-    return
-  end
-  if chapa_tx.status != "success"
-  ActiveRecord::Base.transaction do
-    chapa_tx.update!(status: ChapaTransaction::STATUS_SUCCESS)
-    user.wallet.increment!(:balance, amount)
-  end
+  unless user.wallet
+    Rails.logger.error "Wallet not found for user ##{user.id}"
+    return render json: { error: "User wallet not found" }, status: :unprocessable_entity
   end
 
+  if chapa_tx.success?
+    Rails.logger.info "Transaction already marked successful."
+    return render json: { message: "Already processed" }, status: :ok
+  end
 
   if status == "success"
-  ActiveRecord::Base.transaction do
-    chapa_tx.update!(status: ChapaTransaction::STATUS_SUCCESS)
-
-    if user.wallet
-      user.wallet.increment!(:balance, amount)  # Safely increment wallet balance
+    ActiveRecord::Base.transaction do
+      chapa_tx.update!(status: ChapaTransaction::STATUS_SUCCESS)
+      user.wallet.increment!(:balance, amount)
       Rails.logger.debug "Wallet credited: #{amount} ETB → User #{user.id}"
-    else
-      Rails.logger.error "Wallet not found for user ##{user.id}"
-      render json: { error: "User wallet not found" }, status: :unprocessable_entity
-      return
     end
-  end
   else
-  chapa_tx.update!(status: ChapaTransaction::STATUS_FAILED)
-  Rails.logger.warn "Transaction failed for tx_ref: #{tx_ref}"
+    chapa_tx.update!(status: ChapaTransaction::STATUS_FAILED)
+    Rails.logger.warn "Transaction failed for tx_ref: #{tx_ref}"
   end
-
 
   render json: { message: "Callback handled" }, status: :ok
 end
+
 
 
 
